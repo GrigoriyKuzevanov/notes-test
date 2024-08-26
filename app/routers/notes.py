@@ -13,6 +13,6 @@ def get_notes(limit: int = 10, skip: int = 0):
     return {"message": "success"}
 
 
-@router.post("/", response_model=schemas.NoteOut, status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 def create_note(note: schemas.NoteCreate):
     return {"message": "success"}
