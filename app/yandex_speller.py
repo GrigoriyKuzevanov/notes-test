@@ -1,8 +1,9 @@
 import httpx
-from httpx import HTTPStatusError
+from app.config import settings
 
-SPELLER_URL = "https://speller.yandex.net/services/spellservice.json/checkText"
-LANGUAGES = "ru,en"
+
+SPELLER_URL = settings.speller_url
+LANGUAGES = settings.languages
 
 
 def verify_with_speller(text: str, available_exception):
