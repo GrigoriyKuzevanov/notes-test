@@ -1,10 +1,10 @@
-from pydantic import BaseModel
 from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class UserBase(BaseModel):
     username: str
-    
 
 
 class UserCreate(UserBase):
@@ -42,8 +42,5 @@ class NoteOut(NoteBase):
     created_at: datetime
     owner: UserOut
 
-
     class Config:
         from_attributes = True
-
-
