@@ -10,7 +10,6 @@ DB_PASSWORD = settings.db_password
 DB_NAME = settings.db_name
 
 
-# SQLALCHEMY_DATABASE_URL = f"postgresql://fastapi_user:secret@postgres:5432/fastapi_db"
 SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 
