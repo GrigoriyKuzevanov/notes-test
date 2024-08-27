@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -62,3 +62,59 @@ def create_note(
     db.refresh(new_note)
 
     return new_note
+
+
+@router.put("/{note_id}", response_model=schemas.NoteOut)
+def update_note(
+    note_id: int,
+    note: schemas.NoteCreate,
+    db: Session = Depends(get_db),
+    current_user: int = Depends(oauth2.get_current_user),
+):
+    updated_note = db.get(models.Note, note_id)
+
+    if updated_note is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Note with id: {note_id} was not found",
+        )
+
+    if updated_note.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to perform requested action",
+        )
+
+    for key, value in note.model_dump(exclude_unset=True).items():
+        setattr(updated_note, key, value)
+
+    db.commit()
+    db.refresh(updated_note)
+
+    return updated_note
+
+
+@router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_note(
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: int = Depends(oauth2.get_current_user),
+):
+    deleted_note = db.get(models.Note, note_id)
+
+    if deleted_note is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to perform requested action",
+        )
+
+    if deleted_note.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to perform requested action",
+        )
+
+    db.delete(deleted_note)
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
