@@ -1,0 +1,342 @@
+{
+	"info": {
+		"_postman_id": "830dedf6-4d1d-412a-8200-c6aeafffa1b6",
+		"name": "Notes api",
+		"description": "# Notes API\n\nПростой crud API с системой аутентификации пользователей\n\n## API предоставляет следующие возможности:\n\n- **Создание пользователя: post запрос Create User** При создании пользователя используются два поля: username, password. Также в базе данных создается поле created_at с датой и временем создания записи и уникальный ключ id. Username пользователя должен быть уникальным.\n    \n\nПример запроса:\n\n``` json\nPOST {{URL}}/users\n{\n    \"username\": \"test_user\",\n    \"password\": \"test_password\"\n}\n\n ```\n\nПользователь успешно создан:\n\n``` json\nStatus: 201 Created\n{\n    \"username\": \"test_user\",\n    \"id\": 1,\n    \"created_at\": \"2024-08-28T05:49:42.709827Z\"\n}\n\n ```\n\nПользователь с переданным username уже существует:\n\n``` json\nStatus: 422 Unprocessable Entity\n{\n    \"detail\": \"User with username: test_user already exists\"\n}\n\n ```\n\n- **Получение данных пользователя: get запрос Get User** Получить данные пользователя можно, отправив get запрос по адресу /users/{user_id}, где user_id - id запрашиваемого пользователя\n    \n\nПример запроса:\n\n``` antlr4\nGET {{URL}}/users/1\n\n ```\n\nОтвет:\n\n``` json\nStatus: 200 OK\n{\n    \"username\": \"test_user\",\n    \"id\": 1,\n    \"created_at\": \"2024-08-28T05:49:42.709827Z\"\n}\n\n ```\n\nПользователя с переданным id не существует:\n\n``` json\nStatus: 404 Not Found\n{\n    \"detail\": \"User with id: 2 does not exist\"\n}\n\n ```\n\n- **Авторизация пользователя: post запрос Login** При отправлении валидных данных формы авторизации, сервер в ответ присылает token, который используется для доступа к api заметок\n    \n\nПример запроса:\n\n``` antlr4\nPOST {{URL}}/login\nContent-Type: multipart/form-data\nusername: test_user\npassword: test_password\n\n ```\n\nУспешная авторизация:\n\n``` json\nStatus: 200 OK\n{\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3MjQ4Mjg1Nzh9.Akb6M-gwLRkemw6JiAvbOBrvCIt_kJEX8O00FJOEMTY\",\n    \"token_type\": \"bearer\"\n}\n\n ```\n\nНеверный username или password:\n\n``` json\nStatus: 403 Forbidden\n{\n    \"detail\": \"invalid credentials\"\n}\n\n ```\n\nАвторизованный пользователь получает доступ к операциям с заметкам, в случае неавторизованного доступа к запросам Note, пользователь получит ответ:\n\n``` json\nStatus: 403 Forbidden\n{\n    \"detail\": \"Not authorized to perform requested action\"\n}\n\n ```\n\n- **Создание заметки: post запрос Create Note** Заметка состоит из заголовка (поле \"title\") и содержания заметки (поле \"content\"). При добавлении заметки сервер проверяет содержимое поля \"content\" с помощью сервиса Яндекс.Спеллер. В случае отсутсвия ошибок, заметка добавляется в базу данных. В случае наличия ошибок сервер возвращает значения слов, в которых допущены ошибки и возможные варианты исправления\n    \n\nПример запроса:\n\n``` json\nPOST {{URL}}/notes\n{\n    \"title\": \"test title\",\n    \"content\": \"test content\"\n}\n\n ```\n\nЗаметка успешно создана:\n\n``` json\nStatus: 201 Created\n{\n    \"title\": \"test title\",\n    \"content\": \"test content\",\n    \"id\": 1,\n    \"created_at\": \"2024-08-28T06:11:47.657081Z\",\n    \"owner\": {\n        \"username\": \"test_user\",\n        \"id\": 1,\n        \"created_at\": \"2024-08-28T05:49:42.709827Z\"\n    }\n}\n\n ```\n\nЗаметка содержит орфографические ошибки в поле content:\n\n``` json\nStatus: 422 Unprocessable Entity\n{\n    \"detail\": \"errors in content: [{'tUst': ['trust', 'test', 'tUst', 'tyst']}, {'cAntent': ['content']}]\"\n}\n\n ```\n\nСервис Яндекс.Спеллер недоступен:\n\n``` json\nStatus: 503 Service Unavailable\n{\n    \"detail\": \"Yandex Speller sevice is not available\"\n}\n\n ```\n\n- **Получение заметок: get запрос Get Notes** Пользователm может получить список своих заметок с помщью простого Get запроса\n    \n\nПример запроса:\n\n``` antlr4\nGET {{URL}}/notes\n\n ```\n\nОтвет:\n\n``` json\nStatus: 200 OK\n[\n    {\n        \"title\": \"test title\",\n        \"content\": \"test content\",\n        \"id\": 1,\n        \"created_at\": \"2024-08-28T06:11:47.657081Z\",\n        \"owner\": {\n            \"username\": \"test_user\",\n            \"id\": 1,\n            \"created_at\": \"2024-08-28T05:49:42.709827Z\"\n        }\n    }\n]\n\n ```\n\n- **Обновление заметки: put запрос Update Notes** Пользователь может обновить существующую заметку, отправив put запрос по адресу /notes/{note_id}, где note_id - id требуемой заметки. При этом необходимо в теле запроса, необходимо передать оба поля: title и content, которые заменят соответстующие поля заметки в базе данных с id = note_id\n    \n\nПример запроса:\n\n``` json\nPUT {{URL}}/notes/1\n{\n    \"title\": \"update title\",\n    \"content\": \"some fun content\"\n}\n\n ```\n\nЗаметка успешно обновлена:\n\n``` json\nStatus: 200 OK\n{\n    \"title\": \"update title\",\n    \"content\": \"some fun content\",\n    \"id\": 1,\n    \"created_at\": \"2024-08-28T06:11:47.657081Z\",\n    \"owner\": {\n        \"username\": \"test_user\",\n        \"id\": 1,\n        \"created_at\": \"2024-08-28T05:49:42.709827Z\"\n    }\n}\n\n ```\n\nЗаметки с переданным id не существует:\n\n``` json\n{\n    \"detail\": \"Note with id: 2 does not exists\"\n}\n\n ```\n\n- **Удаление заметки: delete запрос Delete Note** Пользователь может удалить существующую заметку, отправив delete запрос по адресу /notes/{note_id},где note_id - id требуемой заметки\n    \n\nПример запроса:\n\n``` antlr4\nDELETE {{URL}}/notes/1\n\n ```\n\nЗаметка успешно удалена:\n\n``` json\nStatus: 204 No Content\n\n ```\n\nЗаметки с переданным id не существует:\n\n``` json\n{\n    \"detail\": \"Note with id: 2 does not exists\"\n}\n\n ```",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "26177451"
+	},
+	"item": [
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"test_user\",\n    \"password\": \"test_password\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/users",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/users/2",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"users",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set(\"JWT\", pm.response.json().access_token);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "username",
+									"value": "test_user",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "test_password",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{URL}}/login",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Notes",
+			"item": [
+				{
+					"name": "Get Notes",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{JWT}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{URL}}/notes",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"notes"
+							]
+						},
+						"description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Note",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Successful POST request\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{JWT}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"title\": \"test title\",\n    \"content\": \"tUst cAntent\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/notes",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"notes"
+							]
+						},
+						"description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Note",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Successful PUT request\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{JWT}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n\t\"title\": \"update title\",\n    \"content\": \"some fun content\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/notes/2",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"notes",
+								"2"
+							]
+						},
+						"description": "This is a PUT request and it is used to overwrite an existing piece of data. For instance, after you create an entity with a POST request, you may want to modify that later. You can do that using a PUT request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful PUT request typically returns a `200 OK`, `201 Created`, or `204 No Content` response code."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Note",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Successful DELETE request\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 202, 204]);",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{JWT}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{URL}}/notes/2",
+							"host": [
+								"{{URL}}"
+							],
+							"path": [
+								"notes",
+								"2"
+							]
+						},
+						"description": "This is a DELETE request, and it is used to delete data that was previously created via a POST request. You typically identify the entity being updated by including an identifier in the URL (eg. `id=1`).\n\nA successful DELETE request typically returns a `200 OK`, `202 Accepted`, or `204 No Content` response code."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "inherit"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "JWT",
+			"value": ""
+		},
+		{
+			"key": "URL",
+			"value": "http://127.0.0.1:8000"
+		}
+	]
+}

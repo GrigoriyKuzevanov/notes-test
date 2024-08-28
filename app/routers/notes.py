@@ -91,7 +91,7 @@ def update_note(
     if updated_note is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Note with id: {note_id} was not found",
+            detail=f"Note with id: {note_id} does not exists",
         )
 
     if updated_note.owner_id != current_user.id:
@@ -120,7 +120,7 @@ def delete_note(
     if deleted_note is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to perform requested action",
+            detail=f"Note with id: {note_id} does not exists",
         )
 
     if deleted_note.owner_id != current_user.id:
